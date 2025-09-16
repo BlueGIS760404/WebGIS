@@ -2,8 +2,8 @@ import requests
 import folium
 
 # Xweather API credentials
-CLIENT_ID = 'GyYCCFuX6uoVBxFYMTsNZ'
-CLIENT_SECRET = 'gSdEkMSJOy2tcRoO0PsRBg7Z3GOcR16Xqr1Bh3r6'
+CLIENT_ID = '...'
+CLIENT_SECRET = '...'
 
 # Indian cities + neighboring high AQI cities
 cities = {
