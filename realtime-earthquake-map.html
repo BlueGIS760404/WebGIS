@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Data Map (AJAX + Leaflet)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet CSS -->
+  <link 
+    rel="stylesheet" 
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { height: 100vh; width: 100vw; }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <script>
+    // 1️⃣ Initialize the map
+    const map = L.map('map').setView([20, 0], 2); // world view
+
+    // 2️⃣ Add a base layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // 3️⃣ Create a layer group to hold live data
+    const liveLayer = L.layerGroup().addTo(map);
+
+    // 4️⃣ Function to load and refresh data using AJAX (fetch)
+    async function loadLiveData() {
+      try {
+        const response = await fetch(
+          'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson'
+        );
+        const data = await response.json();
+
+        // Clear old markers before adding new ones
+        liveLayer.clearLayers();
+
+        // Add GeoJSON points to map
+        L.geoJSON(data, {
+          pointToLayer: (feature, latlng) => {
+            const magnitude = feature.properties.mag;
+            const color = magnitude >= 4 ? 'red' : magnitude >= 2 ? 'orange' : 'yellow';
+            const radius = magnitude * 3;
+
+            return L.circleMarker(latlng, {
+              radius: radius || 4,
+              color: color,
+              fillColor: color,
+              fillOpacity: 0.6,
+              weight: 1
+            }).bindPopup(
+              `<b>Location:</b> ${feature.properties.place}<br>
+               <b>Magnitude:</b> ${magnitude}<br>
+               <b>Time:</b> ${new Date(feature.properties.time).toLocaleTimeString()}`
+            );
+          }
+        }).addTo(liveLayer);
+
+        console.log('Map data updated at', new Date().toLocaleTimeString());
+      } catch (err) {
+        console.error('Error loading live data:', err);
+      }
+    }
+
+    // 5️⃣ Initial load
+    loadLiveData();
+
+    // 6️⃣ Auto-refresh every 10 seconds
+    setInterval(loadLiveData, 10000);
+  </script>
+
+</body>
+</html>
