@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html>
 <head>
   <title>Live Data Map (AJAX + Leaflet)</title>
@@ -38,7 +38,7 @@
     async function loadLiveData() {
       try {
         const response = await fetch(
-          'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson'
+          'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson'
         );
         const data = await response.json();
 
