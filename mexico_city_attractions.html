@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebMap 101</title>
+    
+    <!-- Bootstrap CSS for responsive layout and styling -->
+    <link
+        rel="stylesheet"
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+        integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+        crossorigin="anonymous"
+    />
+
+    <!-- Leaflet CSS for mapping interface -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    />
+
+    <!-- Custom CSS for layout -->
+    <style>
+        /* Header styling */
+        #header {
+            height: 75px;
+            background-color: darkgoldenrod;
+        }
+
+        /* Map container */
+        #mapdiv {
+            height: 650px;
+            background-color: salmon;
+            position: relative;
+        }
+
+        /* Side panel for attraction buttons */
+        #side_panel {
+            height: 650px;
+            background-color: beige;
+            overflow-y: auto; /* Allow scrolling if many attractions */
+            padding: 10px;
+        }
+
+        /* Footer area */
+        #footer {
+            height: 75px;
+            background-color: grey;
+        }
+
+        /* Attraction button styling */
+        .attraction {
+            margin-bottom: 5px;
+            transition: background-color 0.2s ease;
+        }
+
+        .attraction:hover {
+            background-color: #286090;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div id="header" class="col-md-12">
+        <h1 class="text-center">Mexico City</h1>
+    </div>
+
+    <!-- Side panel: dynamic buttons appear here -->
+    <div id="side_panel" class="col-md-3">
+        <h1 class="text-center">Attractions</h1>
+    </div>
+
+    <!-- Map container -->
+    <div id="mapdiv" class="col-md-9"></div>
+
+    <!-- Footer displaying coordinates and credits -->
+    <div id="footer" class="col-md-12">
+        <h4 id="map_coords" class="text-center">Latitude: 19.4 Longitude: -99.1 Zoom Level: 11</h4>
+        <h4 class="text-center">
+            &copy;2016 <a href="http://millermountain.com">Miller Mountain LLC</a>
+        </h4>
+    </div>
+
+    <!-- jQuery for DOM manipulation -->
+    <script
+        src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"
+    ></script>
+
+    <!-- Bootstrap JS for UI functionality -->
+    <script
+        src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"
+    ></script>
+
+    <!-- Leaflet JS for interactive maps -->
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
+
+    <!-- Leaflet AJAX plugin to load GeoJSON -->
+    <script src="https://unpkg.com/leaflet-ajax/dist/leaflet.ajax.min.js"></script>
+
+    <!-- Main script -->
+    <script>
+        // Initialize the map once the page content is ready
+        document.addEventListener('DOMContentLoaded', initMap);
+
+        function initMap() {
+            // --- 1. Initialize map and base layer ---
+            const mymap = L.map('mapdiv').setView([19.4, -99.1], 11);
+
+            const backgroundLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19
+            }).addTo(mymap);
+
+            mymap.invalidateSize(); // Ensure correct map rendering
+
+            // --- 2. Prepare to load GeoJSON layer ---
+            const geojsonLayer = new L.GeoJSON.AJAX('data/attractions.geojson', {
+                pointToLayer: function(feature, latlng) {
+                    // Extract data safely using optional chaining
+                    const name = feature.properties?.name || 'No name';
+                    const web = feature.properties?.web || '';
+                    const image = feature.properties?.image ? 'img/' + feature.properties.image : '';
+
+                    // Build popup content
+                    let popupHTML = `<h4>${name}</h4><hr>`;
+                    if (web) popupHTML += `<a href="${web}" target="_blank">`;
+                    if (image) popupHTML += `<img src="${image}" width="200px">`;
+                    if (web) popupHTML += `</a>`;
+
+                    // Create a marker and popup
+                    const marker = L.marker(latlng).bindPopup(popupHTML);
+
+                    // Create button dynamically for this feature
+                    const button = $('<button>', {
+                        class: 'form-control btn btn-primary attraction',
+                        text: name,
+                        'aria-label': 'Zoom to ' + name
+                    }).on('click', function () {
+                        // Zoom to marker and open popup on click
+                        mymap.setView(latlng, 17);
+                        marker.openPopup();
+                    });
+
+                    // Append button to side panel
+                    $('#side_panel').append(button);
+
+                    return marker;
+                }
+            });
+
+            // --- 3. Add the layer and event listeners ---
+            geojsonLayer.addTo(mymap);
+
+            // Logging events for better debugging and UX
+            geojsonLayer.on('data:loading', () => console.log('Loading GeoJSON...'));
+            geojsonLayer.on('data:loaded', () => console.log('GeoJSON loaded successfully!'));
+            geojsonLayer.on('data:error', (err) => console.error('Error loading GeoJSON:', err));
+
+            // --- 4. Live coordinate tracking in footer ---
+            mymap.on('mousemove', (e) => {
+                const info = `Latitude: ${e.latlng.lat.toFixed(5)}, Longitude: ${e.latlng.lng.toFixed(5)}, Zoom Level: ${mymap.getZoom()}`;
+                $('#map_coords').html(info);
+            });
+        }
+    </script>
+</body>
+</html>
