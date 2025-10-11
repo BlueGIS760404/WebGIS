@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebMap 101</title>
     
-    <!-- Bootstrap CSS for responsive layout and styling -->
+    <!-- Bootstrap CSS -->
     <link
         rel="stylesheet"
         href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
@@ -13,7 +13,7 @@
         crossorigin="anonymous"
     />
 
-    <!-- Leaflet CSS for mapping interface -->
+    <!-- Leaflet CSS -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -21,36 +21,33 @@
         crossorigin=""
     />
 
-    <!-- Custom CSS for layout -->
+    <!-- Custom CSS -->
     <style>
-        /* Header styling */
+        /* Layout and panels */
         #header {
             height: 75px;
             background-color: darkgoldenrod;
         }
 
-        /* Map container */
         #mapdiv {
             height: 650px;
             background-color: salmon;
             position: relative;
         }
 
-        /* Side panel for attraction buttons */
         #side_panel {
             height: 650px;
             background-color: beige;
-            overflow-y: auto; /* Allow scrolling if many attractions */
+            overflow-y: auto;
             padding: 10px;
         }
 
-        /* Footer area */
         #footer {
             height: 75px;
             background-color: grey;
         }
 
-        /* Attraction button styling */
+        /* Button styles */
         .attraction {
             margin-bottom: 5px;
             transition: background-color 0.2s ease;
@@ -60,6 +57,10 @@
             background-color: #286090;
             color: white;
         }
+
+        .buffer_attraction {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -68,109 +69,119 @@
         <h1 class="text-center">Mexico City</h1>
     </div>
 
-    <!-- Side panel: dynamic buttons appear here -->
+    <!-- Side panel -->
     <div id="side_panel" class="col-md-3">
         <h1 class="text-center">Attractions</h1>
+
+        <!-- Buffer button -->
+        <button id="btnBuffer" class="form-control btn-warning buffer_attraction">Buffer</button>
     </div>
 
     <!-- Map container -->
     <div id="mapdiv" class="col-md-9"></div>
 
-    <!-- Footer displaying coordinates and credits -->
+    <!-- Footer -->
     <div id="footer" class="col-md-12">
-        <h4 id="map_coords" class="text-center">Latitude: 19.4 Longitude: -99.1 Zoom Level: 11</h4>
+        <h4 id="map_coords" class="text-center">
+            Latitude: 19.4 Longitude: -99.1 Zoom Level: 11
+        </h4>
         <h4 class="text-center">
             &copy;2016 <a href="http://millermountain.com">Miller Mountain LLC</a>
         </h4>
     </div>
 
-    <!-- jQuery for DOM manipulation -->
+    <!-- Scripts -->
     <script
         src="https://code.jquery.com/jquery-3.7.1.min.js"
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
         crossorigin="anonymous"
     ></script>
 
-    <!-- Bootstrap JS for UI functionality -->
     <script
         src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
         integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
         crossorigin="anonymous"
     ></script>
 
-    <!-- Leaflet JS for interactive maps -->
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""
     ></script>
 
-    <!-- Leaflet AJAX plugin to load GeoJSON -->
     <script src="https://unpkg.com/leaflet-ajax/dist/leaflet.ajax.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
 
-    <!-- Main script -->
     <script>
-        // Initialize the map once the page content is ready
+        // Initialize map after DOM is ready
         document.addEventListener('DOMContentLoaded', initMap);
 
         function initMap() {
-            // --- 1. Initialize map and base layer ---
+            // --- 1. Map setup ---
             const mymap = L.map('mapdiv').setView([19.4, -99.1], 11);
-
-            const backgroundLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
                 maxZoom: 19
             }).addTo(mymap);
+            mymap.invalidateSize();
 
-            mymap.invalidateSize(); // Ensure correct map rendering
-
-            // --- 2. Prepare to load GeoJSON layer ---
+            // --- 2. Load GeoJSON attractions ---
             const geojsonLayer = new L.GeoJSON.AJAX('data/attractions.geojson', {
-                pointToLayer: function(feature, latlng) {
-                    // Extract data safely using optional chaining
+                pointToLayer: function (feature, latlng) {
                     const name = feature.properties?.name || 'No name';
                     const web = feature.properties?.web || '';
                     const image = feature.properties?.image ? 'img/' + feature.properties.image : '';
 
-                    // Build popup content
                     let popupHTML = `<h4>${name}</h4><hr>`;
                     if (web) popupHTML += `<a href="${web}" target="_blank">`;
                     if (image) popupHTML += `<img src="${image}" width="200px">`;
                     if (web) popupHTML += `</a>`;
 
-                    // Create a marker and popup
                     const marker = L.marker(latlng).bindPopup(popupHTML);
 
-                    // Create button dynamically for this feature
+                    // Add button for each attraction
                     const button = $('<button>', {
                         class: 'form-control btn btn-primary attraction',
                         text: name,
                         'aria-label': 'Zoom to ' + name
                     }).on('click', function () {
-                        // Zoom to marker and open popup on click
                         mymap.setView(latlng, 17);
                         marker.openPopup();
                     });
 
-                    // Append button to side panel
                     $('#side_panel').append(button);
-
                     return marker;
                 }
-            });
+            }).addTo(mymap);
 
-            // --- 3. Add the layer and event listeners ---
-            geojsonLayer.addTo(mymap);
-
-            // Logging events for better debugging and UX
             geojsonLayer.on('data:loading', () => console.log('Loading GeoJSON...'));
             geojsonLayer.on('data:loaded', () => console.log('GeoJSON loaded successfully!'));
-            geojsonLayer.on('data:error', (err) => console.error('Error loading GeoJSON:', err));
 
-            // --- 4. Live coordinate tracking in footer ---
+            // --- 3. Live coordinate tracker ---
             mymap.on('mousemove', (e) => {
                 const info = `Latitude: ${e.latlng.lat.toFixed(5)}, Longitude: ${e.latlng.lng.toFixed(5)}, Zoom Level: ${mymap.getZoom()}`;
                 $('#map_coords').html(info);
+            });
+
+            // --- 4. Buffer functionality ---
+            let bufferLayer;
+
+            $('#btnBuffer').click(function () {
+                const btn = $(this);
+                if (btn.html() === 'Buffer') {
+                    const bufferedAttractions = turf.buffer(geojsonLayer.toGeoJSON(), 1, { units: 'miles' });
+                    bufferLayer = L.geoJSON(bufferedAttractions, {
+                        style: {
+                            color: 'orange',
+                            weight: 2,
+                            fillOpacity: 0.2
+                        }
+                    }).addTo(mymap);
+                    btn.html('Remove Buffer');
+                } else {
+                    mymap.removeLayer(bufferLayer);
+                    btn.html('Buffer');
+                }
             });
         }
     </script>
